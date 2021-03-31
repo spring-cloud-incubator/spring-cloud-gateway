@@ -16,6 +16,7 @@
 
 package org.springframework.cloud.gateway.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -27,6 +28,7 @@ import org.springframework.cloud.client.loadbalancer.reactive.ReactiveLoadBalanc
 import org.springframework.cloud.gateway.config.conditional.ConditionalOnEnabledGlobalFilter;
 import org.springframework.cloud.gateway.filter.LoadBalancerServiceInstanceCookieFilter;
 import org.springframework.cloud.gateway.filter.ReactiveLoadBalancerClientFilter;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration;
 import org.springframework.cloud.loadbalancer.support.LoadBalancerClientFactory;
 import org.springframework.context.annotation.Bean;
@@ -50,8 +52,10 @@ public class GatewayReactiveLoadBalancerClientAutoConfiguration {
 	@ConditionalOnMissingBean(ReactiveLoadBalancerClientFilter.class)
 	@ConditionalOnEnabledGlobalFilter
 	public ReactiveLoadBalancerClientFilter gatewayLoadBalancerClientFilter(LoadBalancerClientFactory clientFactory,
-			GatewayLoadBalancerProperties properties, LoadBalancerProperties loadBalancerProperties) {
-		return new ReactiveLoadBalancerClientFilter(clientFactory, properties, loadBalancerProperties);
+			GatewayLoadBalancerProperties properties, LoadBalancerProperties loadBalancerProperties,
+			ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
+		return new ReactiveLoadBalancerClientFilter(clientFactory, properties, loadBalancerProperties,
+				adaptableLoggerObjectProvider);
 	}
 
 	@Bean

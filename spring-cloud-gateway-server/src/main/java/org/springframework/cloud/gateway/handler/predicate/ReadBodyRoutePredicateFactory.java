@@ -23,6 +23,8 @@ import java.util.function.Predicate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.reactivestreams.Publisher;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.gateway.handler.AsyncPredicate;
@@ -47,14 +49,19 @@ public class ReadBodyRoutePredicateFactory extends AbstractRoutePredicateFactory
 
 	private final List<HttpMessageReader<?>> messageReaders;
 
-	public ReadBodyRoutePredicateFactory() {
+	private final AdaptableLogger adaptableLogger;
+
+	public ReadBodyRoutePredicateFactory(ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		super(Config.class);
 		this.messageReaders = HandlerStrategies.withDefaults().messageReaders();
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
-	public ReadBodyRoutePredicateFactory(List<HttpMessageReader<?>> messageReaders) {
+	public ReadBodyRoutePredicateFactory(List<HttpMessageReader<?>> messageReaders,
+			ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		super(Config.class);
 		this.messageReaders = messageReaders;
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
 	@Override
@@ -80,10 +87,8 @@ public class ReadBodyRoutePredicateFactory extends AbstractRoutePredicateFactory
 						return Mono.just(test);
 					}
 					catch (ClassCastException e) {
-						if (log.isDebugEnabled()) {
-							log.debug("Predicate test failed because class in predicate "
-									+ "does not match the cached body object", e);
-						}
+						adaptableLogger.debug(exchange, "Predicate test failed because class in predicate "
+								+ "does not match the cached body object", e);
 					}
 					return Mono.just(false);
 				}

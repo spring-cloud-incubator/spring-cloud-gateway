@@ -24,6 +24,8 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Timer.Sample;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.gateway.support.tagsprovider.GatewayTagsProvider;
@@ -45,8 +47,10 @@ public class GatewayMetricsFilter implements GlobalFilter, Ordered {
 
 	private final String metricsPrefix;
 
+	private final AdaptableLogger adaptableLogger;
+
 	public GatewayMetricsFilter(MeterRegistry meterRegistry, List<GatewayTagsProvider> tagsProviders,
-			String metricsPrefix) {
+			String metricsPrefix, ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		this.meterRegistry = meterRegistry;
 		this.compositeTagsProvider = tagsProviders.stream().reduce(exchange -> Tags.empty(), GatewayTagsProvider::and);
 		if (metricsPrefix.endsWith(".")) {
@@ -55,6 +59,7 @@ public class GatewayMetricsFilter implements GlobalFilter, Ordered {
 		else {
 			this.metricsPrefix = metricsPrefix;
 		}
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
 	public String getMetricsPrefix() {
@@ -93,9 +98,7 @@ public class GatewayMetricsFilter implements GlobalFilter, Ordered {
 	private void endTimerInner(ServerWebExchange exchange, Sample sample) {
 		Tags tags = compositeTagsProvider.apply(exchange);
 
-		if (log.isTraceEnabled()) {
-			log.trace(metricsPrefix + ".requests tags: " + tags);
-		}
+		adaptableLogger.trace(exchange, metricsPrefix + ".requests tags: " + tags);
 		sample.stop(meterRegistry.timer(metricsPrefix + ".requests", tags));
 	}
 

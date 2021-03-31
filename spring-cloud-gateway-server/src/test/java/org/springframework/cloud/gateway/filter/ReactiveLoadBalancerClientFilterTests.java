@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
+import org.springframework.cloud.gateway.logging.PassthroughLogger;
+import org.springframework.cloud.gateway.logging.TestAdaptableLoggerObjectProvider;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.client.DefaultServiceInstance;
@@ -79,6 +85,8 @@ import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.G
 @ExtendWith(MockitoExtension.class)
 class ReactiveLoadBalancerClientFilterTests {
 
+	private Log log = LogFactory.getLog(ReactiveLoadBalancerClientFilterTests.class);
+
 	private ServerWebExchange exchange;
 
 	private GatewayLoadBalancerProperties properties;
@@ -92,12 +100,15 @@ class ReactiveLoadBalancerClientFilterTests {
 	@Mock
 	private LoadBalancerProperties loadBalancerProperties;
 
-	@InjectMocks
+	private ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider = new TestAdaptableLoggerObjectProvider(log);
+
 	private ReactiveLoadBalancerClientFilter filter;
 
 	@BeforeEach
 	void setup() {
 		properties = new GatewayLoadBalancerProperties();
+		filter = new ReactiveLoadBalancerClientFilter(clientFactory, properties, loadBalancerProperties,
+				adaptableLoggerObjectProvider);
 		exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/mypath").build());
 	}
 
@@ -261,7 +272,7 @@ class ReactiveLoadBalancerClientFilterTests {
 		when(clientFactory.getInstance("service1", ReactorServiceInstanceLoadBalancer.class)).thenReturn(loadBalancer);
 		properties.setUse404(true);
 		ReactiveLoadBalancerClientFilter filter = new ReactiveLoadBalancerClientFilter(clientFactory, properties,
-				loadBalancerProperties);
+				loadBalancerProperties, new TestAdaptableLoggerObjectProvider(log));
 		when(chain.filter(exchange)).thenReturn(Mono.empty());
 		try {
 			filter.filter(exchange, chain).block();
@@ -429,7 +440,7 @@ class ReactiveLoadBalancerClientFilterTests {
 		when(clientFactory.getInstance("service1", ReactorServiceInstanceLoadBalancer.class)).thenReturn(loadBalancer);
 
 		ReactiveLoadBalancerClientFilter filter = new ReactiveLoadBalancerClientFilter(clientFactory, properties,
-				loadBalancerProperties);
+				loadBalancerProperties, new TestAdaptableLoggerObjectProvider(log));
 		filter.filter(exchange, chain).block();
 
 		return captor.getValue();

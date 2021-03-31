@@ -22,12 +22,16 @@ import java.util.function.Predicate;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory.Config;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
+import org.springframework.cloud.gateway.logging.PassthroughLogger;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.cloud.gateway.test.BaseWebClientTests;
@@ -45,6 +49,9 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @DirtiesContext
 public class PathRoutePredicateFactoryTests extends BaseWebClientTests {
+
+	@Autowired
+	private ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider;
 
 	@Test
 	public void pathRouteWorks() {
@@ -100,14 +107,15 @@ public class PathRoutePredicateFactoryTests extends BaseWebClientTests {
 	@Test
 	public void toStringFormat() {
 		Config config = new Config().setPatterns(Arrays.asList("patternA", "patternB")).setMatchTrailingSlash(false);
-		Predicate predicate = new PathRoutePredicateFactory().apply(config);
+		Predicate predicate = new PathRoutePredicateFactory(adaptableLoggerObjectProvider).apply(config);
 		assertThat(predicate.toString()).contains("patternA").contains("patternB").contains("false");
 	}
 
 	@Test
 	public void toStringFormatMatchTrailingSlashTrue() {
 		Config config = new Config().setPatterns(Arrays.asList("patternA", "patternB")).setMatchTrailingSlash(true);
-		Predicate<ServerWebExchange> predicate = new PathRoutePredicateFactory().apply(config);
+		Predicate<ServerWebExchange> predicate = new PathRoutePredicateFactory(adaptableLoggerObjectProvider)
+				.apply(config);
 		assertThat(predicate.toString()).contains("patternA").contains("patternB").contains("true");
 	}
 

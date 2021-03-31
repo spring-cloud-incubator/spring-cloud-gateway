@@ -21,6 +21,10 @@ import java.util.function.Predicate;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
+import org.springframework.cloud.gateway.logging.PassthroughLogger;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -51,6 +55,9 @@ import static org.springframework.cloud.gateway.test.TestUtils.assertStatus;
 @ActiveProfiles({ "remote-address" })
 public class RemoteAddrRoutePredicateFactoryTests extends BaseWebClientTests {
 
+	@Autowired
+	private ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider;
+
 	@Test
 	public void remoteAddrWorks() {
 		Mono<ClientResponse> result = webClient.get().uri("/ok/httpbin/").exchangeToMono(Mono::just);
@@ -80,7 +87,7 @@ public class RemoteAddrRoutePredicateFactoryTests extends BaseWebClientTests {
 	public void toStringFormat() {
 		Config config = new Config();
 		config.setSources("1.2.3.4", "5.6.7.8");
-		Predicate predicate = new RemoteAddrRoutePredicateFactory().apply(config);
+		Predicate predicate = new RemoteAddrRoutePredicateFactory(adaptableLoggerObjectProvider).apply(config);
 		assertThat(predicate.toString()).contains("RemoteAddrs: [1.2.3.4, 5.6.7.8]");
 	}
 

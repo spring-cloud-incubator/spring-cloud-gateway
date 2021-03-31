@@ -18,6 +18,8 @@ package org.springframework.cloud.gateway.filter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.Ordered;
@@ -30,6 +32,12 @@ public class RemoveCachedBodyFilter implements GlobalFilter, Ordered {
 
 	private static final Log log = LogFactory.getLog(RemoveCachedBodyFilter.class);
 
+	private final AdaptableLogger adaptableLogger;
+
+	public RemoveCachedBodyFilter(ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
+	}
+
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 		return chain.filter(exchange).doFinally(s -> {
@@ -37,9 +45,7 @@ public class RemoveCachedBodyFilter implements GlobalFilter, Ordered {
 			if (attribute != null && attribute instanceof PooledDataBuffer) {
 				PooledDataBuffer dataBuffer = (PooledDataBuffer) attribute;
 				if (dataBuffer.isAllocated()) {
-					if (log.isTraceEnabled()) {
-						log.trace("releasing cached body in exchange attribute");
-					}
+					adaptableLogger.trace(exchange, "releasing cached body in exchange attribute");
 					dataBuffer.release();
 				}
 			}

@@ -21,6 +21,8 @@ import java.util.List;
 import io.netty.buffer.ByteBuf;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -51,8 +53,12 @@ public class NettyWriteResponseFilter implements GlobalFilter, Ordered {
 
 	private final List<MediaType> streamingMediaTypes;
 
-	public NettyWriteResponseFilter(List<MediaType> streamingMediaTypes) {
+	private final AdaptableLogger adaptableLogger;
+
+	public NettyWriteResponseFilter(List<MediaType> streamingMediaTypes,
+			ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		this.streamingMediaTypes = streamingMediaTypes;
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
 	@Override
@@ -73,11 +79,9 @@ public class NettyWriteResponseFilter implements GlobalFilter, Ordered {
 					if (connection == null) {
 						return Mono.empty();
 					}
-					if (log.isTraceEnabled()) {
-						log.trace("NettyWriteResponseFilter start inbound: "
-								+ connection.channel().id().asShortText() + ", outbound: "
-								+ exchange.getLogPrefix());
-					}
+					adaptableLogger.trace(exchange, "NettyWriteResponseFilter start inbound: "
+							+ connection.channel().id().asShortText() + ", outbound: "
+							+ exchange.getLogPrefix());
 					ServerHttpResponse response = exchange.getResponse();
 
 					// TODO: needed?
@@ -92,9 +96,7 @@ public class NettyWriteResponseFilter implements GlobalFilter, Ordered {
 						contentType = response.getHeaders().getContentType();
 					}
 					catch (Exception e) {
-						if (log.isTraceEnabled()) {
-							log.trace("invalid media type", e);
-						}
+						adaptableLogger.trace(exchange, "invalid media type", e);
 					}
 					return (isStreamingMediaType(contentType)
 							? response.writeAndFlushWith(body.map(Flux::just))

@@ -31,6 +31,8 @@ import io.netty.handler.ipfilter.IpSubnetFilterRule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import org.springframework.cloud.gateway.support.ipresolver.RemoteAddressResolver;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ServerWebExchange;
@@ -45,8 +47,11 @@ public class RemoteAddrRoutePredicateFactory
 
 	private static final Log log = LogFactory.getLog(RemoteAddrRoutePredicateFactory.class);
 
-	public RemoteAddrRoutePredicateFactory() {
+	private final AdaptableLogger adaptableLogger;
+
+	public RemoteAddrRoutePredicateFactory(ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		super(Config.class);
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
 	@Override
@@ -81,7 +86,7 @@ public class RemoteAddrRoutePredicateFactory
 					String host = exchange.getRequest().getURI().getHost();
 
 					if (log.isDebugEnabled() && !hostAddress.equals(host)) {
-						log.debug("Remote addresses didn't match " + hostAddress + " != " + host);
+						adaptableLogger.debug(exchange, "Remote addresses didn't match " + hostAddress + " != " + host);
 					}
 
 					for (IpSubnetFilterRule source : sources) {

@@ -19,8 +19,13 @@ package org.springframework.cloud.gateway.filter.factory;
 import java.net.URI;
 import java.util.LinkedHashSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
+import org.springframework.cloud.gateway.logging.TestAdaptableLoggerObjectProvider;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -40,6 +45,10 @@ import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.G
  */
 public class PrefixPathGatewayFilterFactoryTest {
 
+	private Log log = LogFactory.getLog(PrefixPathGatewayFilterFactoryTest.class);
+
+	private ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider = new TestAdaptableLoggerObjectProvider(log);
+
 	@Test
 	public void testPrefixPath() {
 		testPrefixPathFilter("/foo", "/bar", "/foo/bar");
@@ -47,7 +56,8 @@ public class PrefixPathGatewayFilterFactoryTest {
 	}
 
 	private void testPrefixPathFilter(String prefix, String path, String expectedPath) {
-		GatewayFilter filter = new PrefixPathGatewayFilterFactory().apply(c -> c.setPrefix(prefix));
+		GatewayFilter filter = new PrefixPathGatewayFilterFactory(adaptableLoggerObjectProvider)
+				.apply(c -> c.setPrefix(prefix));
 		MockServerHttpRequest request = MockServerHttpRequest.get("http://localhost" + path).build();
 
 		ServerWebExchange exchange = MockServerWebExchange.from(request);
@@ -70,7 +80,7 @@ public class PrefixPathGatewayFilterFactoryTest {
 	public void toStringFormat() {
 		Config config = new Config();
 		config.setPrefix("myprefix");
-		GatewayFilter filter = new PrefixPathGatewayFilterFactory().apply(config);
+		GatewayFilter filter = new PrefixPathGatewayFilterFactory(adaptableLoggerObjectProvider).apply(config);
 		assertThat(filter.toString()).contains("myprefix");
 	}
 

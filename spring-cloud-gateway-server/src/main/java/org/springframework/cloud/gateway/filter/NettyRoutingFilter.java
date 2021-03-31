@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.cloud.gateway.logging.AdaptableLogger;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -87,11 +88,14 @@ public class NettyRoutingFilter implements GlobalFilter, Ordered {
 	// do not use this headersFilters directly, use getHeadersFilters() instead.
 	private volatile List<HttpHeadersFilter> headersFilters;
 
+	private final AdaptableLogger adaptableLogger;
+
 	public NettyRoutingFilter(HttpClient httpClient, ObjectProvider<List<HttpHeadersFilter>> headersFiltersProvider,
-			HttpClientProperties properties) {
+			HttpClientProperties properties, ObjectProvider<AdaptableLogger> adaptableLoggerObjectProvider) {
 		this.httpClient = httpClient;
 		this.headersFiltersProvider = headersFiltersProvider;
 		this.properties = properties;
+		this.adaptableLogger = adaptableLoggerObjectProvider.getObject(log);
 	}
 
 	public List<HttpHeadersFilter> getHeadersFilters() {
@@ -140,7 +144,7 @@ public class NettyRoutingFilter implements GlobalFilter, Ordered {
 			}
 		}).request(method).uri(url).send((req, nettyOutbound) -> {
 			if (log.isTraceEnabled()) {
-				nettyOutbound.withConnection(connection -> log.trace("outbound route: "
+				nettyOutbound.withConnection(connection -> adaptableLogger.trace(exchange, "outbound route: "
 						+ connection.channel().id().asShortText() + ", inbound: " + exchange.getLogPrefix()));
 			}
 			return nettyOutbound.send(request.getBody().map(this::getByteBuf));
