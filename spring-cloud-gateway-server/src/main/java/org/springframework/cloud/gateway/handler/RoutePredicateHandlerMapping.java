@@ -25,6 +25,7 @@ import org.springframework.cloud.gateway.route.Route;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.core.env.Environment;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.reactive.handler.AbstractHandlerMapping;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -48,6 +49,8 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 
 	private final ManagementPortType managementPortType;
 
+	private final boolean corsPrefightPassthrough;
+
 	public RoutePredicateHandlerMapping(FilteringWebHandler webHandler,
 			RouteLocator routeLocator, GlobalCorsProperties globalCorsProperties,
 			Environment environment) {
@@ -58,6 +61,8 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 		this.managementPortType = getManagementPortType(environment);
 		setOrder(1);
 		setCorsConfigurations(globalCorsProperties.getCorsConfigurations());
+		this.corsPrefightPassthrough = globalCorsProperties.getPreflight()
+				.isPassthrough();
 	}
 
 	private ManagementPortType getManagementPortType(Environment environment) {
@@ -73,6 +78,24 @@ public class RoutePredicateHandlerMapping extends AbstractHandlerMapping {
 
 	private static Integer getPortProperty(Environment environment, String prefix) {
 		return environment.getProperty(prefix + "port", Integer.class);
+	}
+
+	@Override
+	public Mono<Object> getHandler(ServerWebExchange exchange) {
+		// to support cors prefight passtrough
+		if (this.corsPrefightPassthrough
+				&& CorsUtils.isPreFlightRequest(exchange.getRequest())) {
+			return this.getHandlerInternal(exchange).map((handler) -> {
+				if (this.logger.isDebugEnabled()) {
+					this.logger.debug(exchange.getLogPrefix() + "Mapped to " + handler);
+				}
+
+				return handler;
+			});
+		}
+		else {
+			return super.getHandler(exchange);
+		}
 	}
 
 	@Override
